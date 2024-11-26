@@ -1,0 +1,6 @@
+```
+   streamlit
+   SQLAlchemy
+   pandas
+   reportlab
+   ```
