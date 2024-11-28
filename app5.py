@@ -59,70 +59,84 @@ def login():
         else:
             st.error("Invalid username or password")
 
-def generate_pdf(certificate, footer_text="Default Admin Text"):
+def public_verification():
+    """Public function to verify certificates."""
+    st.subheader("Verify Certificate")
+
+    # Add GitHub link to the template repository
+    st.markdown(
+        """
+        **Template Repository:** 
+        [Certificate Template on GitHub](https://github.com/your-username/your-repository-name)
+        """
+    )
+
+    # Search field for certificate number
+    certificate_no = st.text_input("Enter Certificate No to Search")
+
+    session = SessionLocal()
     try:
-        # Paths
-        template_path = r"C:\Users\MIS\Desktop\development\my_certificate_app\logos\image.pdf"
+        # Fetch certificate based on search
+        if certificate_no:
+            certificates = session.query(Certificate).filter_by(certificate_no=certificate_no).all()
+        else:
+            certificates = []
 
-        # Step 1: Create PDF overlay with student information
-        packet = BytesIO()
-        can = canvas.Canvas(packet, pagesize=landscape(letter))
+        # Show search results
+        if certificates:
+            st.write("### Certificate Information")
+            table_data = []
 
-        # Set font and size
-        can.setFont("Helvetica-Bold", 18)
+            for cer in certificates:
+                # Add data rows with "View" and "Verify" buttons
+                table_data.append(
+                    {
+                        "Serial No": cer.serial_no,
+                        "Name": cer.name,
+                        "Course": cer.course_name,
+                        "City": cer.city,
+                        "Country": cer.country,
+                        "Certificate No": cer.certificate_no,
+                        "Verify": "✔️ Verified",  # Static verify option
+                        "View": st.button("View", key=f"view_{cer.id}")
+                    }
+                )
 
-        # Draw Certificate Information
-        serial_no_x, serial_no_y = 200, 400
-        name_x, name_y = 200, 360
-        city_x, city_y = 200, 315
-        country_x, country_y = 200, 275
-        certificate_no_x, certificate_no_y = 250, 230
-        date_x, date_y = 440, 190
-        course_x, course_y = 200, 150
+            # Convert data to a DataFrame for better display
+            df = pd.DataFrame(table_data)
 
-        can.drawString(serial_no_x, serial_no_y, certificate.serial_no or 'N/A')
-        can.drawString(name_x, name_y, certificate.name or 'N/A')
-        can.drawString(city_x, city_y, certificate.city or 'N/A')
-        can.drawString(country_x, country_y, certificate.country or 'N/A')
-        can.drawString(certificate_no_x, certificate_no_y, certificate.certificate_no or 'N/A')
-        can.drawString(date_x, date_y, certificate.date_of_certificate.strftime('%Y-%m-%d') if certificate.date_of_certificate else 'N/A')
-        can.drawString(course_x, course_y, certificate.course_name or 'N/A')
+            # Render the table with only the searched certificate
+            st.dataframe(df)
 
-        # Include photo
-        if certificate.photo and os.path.exists(certificate.photo):
-            photo_x, photo_y = 650, 300
-            photo_width, photo_height = 150, 150
-            can.drawImage(certificate.photo, photo_x, photo_y, width=photo_width, height=photo_height)
+            # Check which "View" button is clicked
+            for cer in certificates:
+                if st.session_state.get(f"view_{cer.id}"):
+                    st.write(f"### Viewing Certificate for {cer.name}")
+                    pdf_buffer = generate_pdf(cer)
 
-        # Footer with custom admin text and website URL
-        width, height = landscape(letter)
-        can.setFont("Helvetica-Bold", 12)
-        can.drawCentredString(width / 2, 70, footer_text)  # Custom text
-        can.drawCentredString(width / 2, 50, certificate.website or "example.com")  # Website URL
+                    if pdf_buffer:
+                        # Convert PDF to Base64
+                        pdf_base64 = base64.b64encode(pdf_buffer.read()).decode("utf-8")
 
-        can.save()
-        packet.seek(0)
-
-        # Step 2: Merge overlay onto template
-        with open(template_path, "rb") as f:
-            template_pdf = PdfReader(BytesIO(f.read()))
-
-        overlay_pdf = PdfReader(BytesIO(packet.getvalue()))
-        output_pdf = PdfWriter()
-
-        template_page = template_pdf.pages[0]
-        overlay_page = overlay_pdf.pages[0]
-        template_page.merge_page(overlay_page)
-        output_pdf.add_page(template_page)
-
-        output_buffer = BytesIO()
-        output_pdf.write(output_buffer)
-        output_buffer.seek(0)
-        return output_buffer
-
+                        # Embed PDF in an iframe
+                        pdf_html = f"""
+                        <iframe
+                            src="data:application/pdf;base64,{pdf_base64}"
+                            width="100%"
+                            height="600px"
+                            style="border: none;">
+                        </iframe>
+                        """
+                        st.markdown(pdf_html, unsafe_allow_html=True)
+                    else:
+                        st.error("Failed to generate the certificate view.")
+                    break  # Only display one certificate at a time
+        else:
+            st.info("No certificate found with the given Certificate No. Please try again.")
     except Exception as e:
-        st.error(f"Error generating PDF: {e}")
-        return None
+        st.error(f"Error retrieving certificates: {e}")
+    finally:
+        session.close()
 
 
 
