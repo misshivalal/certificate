@@ -67,7 +67,7 @@ def public_verification():
     st.markdown(
         """
         **Template Repository:** 
-        [Certificate Template on GitHub](https://github.com/your-username/your-repository-name)
+        [Certificate Template on GitHub](https://github.com/your-username/misshivalal)
         """
     )
 
