@@ -2,4 +2,5 @@ streamlit
 SQLAlchemy
 pandas
 reportlab
+PyPDF2 
   
