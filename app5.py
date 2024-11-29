@@ -62,7 +62,7 @@ def login():
 def generate_pdf(certificate, footer_text="Default Admin Text"):
     try:
         # Paths
-        template_path = https://raw.githubusercontent.com//misshivalal//certificate//main//image
+        template_path = r"C:\Users\MIS\Desktop\development\my_certificate_app\logos\image.pdf"
 
         # Step 1: Create PDF overlay with student information
         packet = BytesIO()
